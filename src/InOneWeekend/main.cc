@@ -16,8 +16,13 @@
 #include "hittable_list.h"
 #include "material.h"
 #include "sphere.h"
+#include "rtw_stb_image.h"
+#include "external/ctpl_stl.h"
 
 #include <iostream>
+#include <vector>
+#include <thread>
+#include <future>
 
 
 color ray_color(const ray& r, const hittable& world, int depth) {
@@ -113,22 +118,31 @@ int main() {
     camera cam(lookfrom, lookat, vup, 20, aspect_ratio, aperture, dist_to_focus);
 
     // Render
+    uint8_t pixels [image_height * image_width * 3] = {}; 
 
-    std::cout << "P3\n" << image_width << ' ' << image_height << "\n255\n";
-
+    int num_threads = std::thread::hardware_concurrency();
+    ctpl::thread_pool pool(num_threads);
+    std::vector<std::future<void>> results;
+    static std::atomic_int remaining(image_height);
     for (int j = image_height-1; j >= 0; --j) {
-        std::cerr << "\rScanlines remaining: " << j << ' ' << std::flush;
-        for (int i = 0; i < image_width; ++i) {
-            color pixel_color(0,0,0);
-            for (int s = 0; s < samples_per_pixel; ++s) {
-                auto u = (i + random_double()) / (image_width-1);
-                auto v = (j + random_double()) / (image_height-1);
-                ray r = cam.get_ray(u, v);
-                pixel_color += ray_color(r, world, max_depth);
+        results.push_back(pool.push([&pixels, image_width, j, image_height, samples_per_pixel, cam, world, max_depth](int id) {
+            for (int i = 0; i < image_width; ++i) {
+                    color pixel_color(0,0,0);
+                    for (int s = 0; s < samples_per_pixel; ++s) {
+                        auto u = (i + random_double()) / (image_width-1);
+                        auto v = (j + random_double()) / (image_height-1);
+                        ray r = cam.get_ray(u, v);
+                        pixel_color += ray_color(r, world, max_depth);
+                    }
+                    write_color(pixels, j, i, image_width, pixel_color, samples_per_pixel);
             }
-            write_color(std::cout, pixel_color, samples_per_pixel);
-        }
+            std::cerr << "\rScanlines remaining: " << --remaining << ' ' << std::flush;
+        }));
     }
+    std::for_each(results.begin(), results.end(), [](std::future<void>& r){ r.wait(); });
+
+    stbi_flip_vertically_on_write(true);
+    stbi_write_png("image.png", image_width, image_height, /* RGB */ 3, pixels, image_width * 3);
 
     std::cerr << "\nDone.\n";
 }
