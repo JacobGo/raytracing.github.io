@@ -3,3 +3,4 @@ pre-optimization
 
 after multithreading + png lib
 1200w 10pp 1m36s
+1200w 100pp 20m48s

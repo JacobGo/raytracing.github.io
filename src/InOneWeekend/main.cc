@@ -125,7 +125,7 @@ int main() {
     std::vector<std::future<void>> results;
     static std::atomic_int remaining(image_height);
     for (int j = image_height-1; j >= 0; --j) {
-        results.push_back(pool.push([&pixels, image_width, j, image_height, samples_per_pixel, cam, world, max_depth](int id) {
+        results.push_back(pool.push([&pixels, image_width, j, image_height, samples_per_pixel, &cam, &world, max_depth](int id) {
             for (int i = 0; i < image_width; ++i) {
                     color pixel_color(0,0,0);
                     for (int s = 0; s < samples_per_pixel; ++s) {

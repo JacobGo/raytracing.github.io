@@ -82,3 +82,4 @@ add_executable(sphere_importance src/TheRestOfYourLife/sphere_importance.cc ${CO
 add_executable(sphere_plot       src/TheRestOfYourLife/sphere_plot.cc       ${COMMON_ALL})
 
 include_directories(src/common)
+add_compile_options(-O3 -pthread -Wall -g)
